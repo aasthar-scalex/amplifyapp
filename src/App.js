@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import "./App.css";
 import "@aws-amplify/ui-react/styles.css";
 import { API, Storage } from "aws-amplify";
-import { withAuthenticator, AmplifySignOut } from "@aws-amplify/ui-react";
+import { withAuthenticator, Button } from "@aws-amplify/ui-react";
 import { listNotes } from "./graphql/queries";
 import {
   createNote as createNoteMutation,
@@ -11,13 +11,21 @@ import {
 
 const initialFormState = { name: "", description: "" };
 
-function App() {
+function App({ signOut }) {
   const [notes, setNotes] = useState([]);
   const [formData, setFormData] = useState(initialFormState);
 
   useEffect(() => {
     fetchNotes();
   }, []);
+
+  async function onChange(e) {
+    if (!e.target.files[0]) return;
+    const file = e.target.files[0];
+    setFormData({ ...formData, image: file.name });
+    await Storage.put(file.name, file);
+    fetchNotes();
+  }
 
   async function fetchNotes() {
     const apiData = await API.graphql({ query: listNotes });
@@ -48,7 +56,7 @@ function App() {
     setFormData(initialFormState);
   }
 
-  async function deleteNote({ id, signOut }) {
+  async function deleteNote({ id }) {
     const newNotesArray = notes.filter((note) => note.id !== id);
     setNotes(newNotesArray);
     await API.graphql({
@@ -57,17 +65,10 @@ function App() {
     });
   }
 
-  async function onChange(e) {
-    if (!e.target.files[0]) return;
-    const file = e.target.files[0];
-    setFormData({ ...formData, image: file.name });
-    await Storage.put(file.name, file);
-    fetchNotes();
-  }
-
   return (
     <div className="App">
       <h1>My Notes App</h1>
+      <Button onClick={signOut}>SignOUT</Button>
       <input
         onChange={(e) => setFormData({ ...formData, name: e.target.value })}
         placeholder="Note name"
@@ -81,7 +82,6 @@ function App() {
         value={formData.description}
       />
       <input type="file" onChange={onChange} />
-
       <button onClick={createNote}>Create Note</button>
       <div style={{ marginBottom: 30 }}>
         {notes.map((note) => (
@@ -93,7 +93,7 @@ function App() {
           </div>
         ))}
       </div>
-      <withAuthenticator />
+      {/* <AmplifySignOut /> */}
     </div>
   );
 }
